@@ -157,6 +157,25 @@ class CmdLine : public CmdLineInterface
 		 */
 		void deleteOnExit(Visitor* ptr);
 
+		/**
+		 * Checks if a character is a quote character.
+		 * \param c - The character to check for.
+		 */
+		bool _isQuote(char c);
+
+		/**
+		 * Checks if a character is a whitespace character.
+		 * \param c - The character to check for.
+		 */
+		bool _isWhitespace(char c);
+
+		/**
+		 * Checks if a character is an escape character.
+		 * \param c - The character to check for.
+		 */
+		bool _isEscape(char c);
+
+
 private:
 
 		/**
@@ -240,6 +259,12 @@ private:
 		 * \param argv - Array of arguments.
 		 */
 		void parse(int argc, const char * const * argv);
+
+		/**
+		 * Parses the command line string.
+		 * \param args - The command line.
+		 */
+		void parse(const std::string& args);
 
 		/**
 		 * Parses the command line.
@@ -506,6 +531,129 @@ inline void CmdLine::parse(std::vector<std::string>& args)
 
 	if (shouldExit)
 		exit(estat);
+}
+
+inline void CmdLine::parse(const std::string& args)
+{
+	std::stringstream ain(args); // used to iterate over input string
+	ain >> std::noskipws; // do not skip white spaces
+	std::vector<std::string> oargs; // output list of arguments
+
+	std::stringstream currentArg("");
+	currentArg >> std::noskipws;
+	
+	// current state
+	enum State {
+		InArg,      // currently scanning an argument
+		InArgQuote, // currently scanning an argument (which started with quotes)
+		OutOfArg    // currently not scanning an argument
+	};
+	State currentState = OutOfArg;
+
+	char currentQuoteChar = '\0'; // to distinguish between ' and " quotations
+	                              // this allows to use "foo'bar"
+
+	char c;
+	while(!ain.eof() && (ain >> c)) { // iterate char by char
+
+		if(_isQuote(c)) {
+			switch(currentState) {
+				case OutOfArg:
+					currentArg.str(std::string());
+				case InArg:
+					currentState = InArgQuote;
+					currentQuoteChar = c;
+					break;
+				
+				case InArgQuote:
+					if(c == currentQuoteChar)
+						currentState = InArg;
+					else
+						currentArg << c;
+					break;
+			}
+
+		}
+		else if(_isWhitespace(c)) {
+			switch(currentState) {
+				case InArg:
+					oargs.push_back(currentArg.str());
+					currentState = OutOfArg;
+					break;
+				case InArgQuote:
+					currentArg << c;
+					break;
+				case OutOfArg:
+					// nothing
+					break;
+			}
+		}
+		else if(_isEscape(c)) {
+			switch(currentState) {
+				case OutOfArg:
+					currentArg.str(std::string());
+					currentState = InArg;
+				case InArg:
+				case InArgQuote:
+					if(ain.eof())
+						throw(CmdLineParseException("Found Escape Character at end of file."));
+					ain >> c;
+					currentArg << c;
+					break;
+			}
+		}
+		else {
+			switch(currentState) {
+				case InArg:
+				case InArgQuote:
+					currentArg << c;
+					break;
+
+				case OutOfArg:
+					currentArg.str(std::string());
+					currentArg << c;
+					currentState = InArg;
+					break;
+			}
+		}
+	}
+
+	if(currentState == InArg)
+		oargs.push_back(currentArg.str());
+	else if(currentState == InArgQuote)
+		throw(CmdLineParseException("Starting quote has no ending quote."));
+
+	for(int i=0;i<oargs.size();++i)
+		std::cout << i << "=\"" << oargs[i] << "\"" << std::endl;
+	parse(oargs);
+}
+
+inline bool CmdLine::_isQuote(char c)
+{
+	if(c == '\"')
+		return true;
+	else if(c == '\'')
+		return true;
+
+	return false;
+}
+
+inline bool CmdLine::_isEscape(char c)
+{
+	if(c == '\\')
+		return true;
+
+	return false;
+}
+
+inline bool CmdLine::_isWhitespace(char c)
+{
+	if(c == ' ')
+		return true;
+	else if(c == '\t')
+		return true;
+
+	return false;
 }
 
 inline bool CmdLine::_emptyCombined(const std::string& s)
