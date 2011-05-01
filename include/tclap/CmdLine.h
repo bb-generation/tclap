@@ -472,6 +472,9 @@ inline void CmdLine::parse(std::vector<std::string>& args)
 	int estat = 0;
 
 	try {
+		if(args.empty())
+			throw CmdLineParseException("Argument list empty.");
+
 		_progName = args.front();
 		args.erase(args.begin());
 
