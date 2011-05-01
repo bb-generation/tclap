@@ -13,7 +13,7 @@ namespace TCLAP {
                                           const std::string &s)
     {
         std::istringstream iss(s);
-        while (iss) {
+        while (!iss.eof()) {
             double tmp;
             iss >> tmp;
             v.push_back(tmp);
