@@ -65,6 +65,9 @@ class StdOutput : public CmdLineOutput
 		 * \param c - The CmdLine object the output is generated for. 
 		 * \param e - The ArgException that caused the failure. 
 		 */
+#ifndef TCLAP_NAMESTARTSTRING 
+#define TCLAP_NAMESTARTSTRING "--"
+#endif
 		virtual void failure(CmdLineInterface& c, 
 				     ArgException& e );
 
@@ -143,7 +146,8 @@ inline void StdOutput::failure( CmdLineInterface& _cmd,
 			_shortUsage( _cmd, std::cerr );	
 
 			std::cerr << std::endl << "For complete USAGE and HELP type: " 
-					  << std::endl << "   " << progName << " --help" 
+					  << std::endl << "   " << progName << " "
+					  << TCLAP_NAMESTARTSTRING << "help"
 					  << std::endl << std::endl;
 		}
 	else
